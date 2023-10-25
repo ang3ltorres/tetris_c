@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.27)
 set(PROJECT_NAME tetris_c)
 project(${PROJECT_NAME} LANGUAGES C)
-set(CMAKE_C_STANDARD 90)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 add_compile_options(-Wall -pedantic -Wextra)
