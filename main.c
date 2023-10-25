@@ -75,14 +75,11 @@ void loop()
 
 	while (true)
 	{
-
-		// Show screen
 		cleanScreen();
-		updateCurrentPiece();
 		printBoard();
 
-		// Wait time
 		sleep(200);
+		updateCurrentPiece();
 	}
 }
 
@@ -120,9 +117,6 @@ void newPiece()
 {
 	uint8_t i;
 	uint8_t random = rand() % 7;
-
-	for (i = 0; i < 4; i++)
-		setBit(currentPiece[i].x, currentPiece[i].y, false);
 
 	switch (random)
 	{
@@ -240,9 +234,24 @@ void updateCurrentPiece()
 {
 	uint8_t i;
 
+	// Prevent self collisions
 	for (i = 0; i < 4; i++)
 		setBit(currentPiece[i].x, currentPiece[i].y, false);
 
+	// Check collision
+	for (i = 0; i < 4; i++)
+	{
+		if ((currentPiece[i].y + 1 >= 20) || (getBit(currentPiece[i].x, currentPiece[i].y + 1)))
+		{
+			for (i = 0; i < 4; i++)
+				setBit(currentPiece[i].x, currentPiece[i].y, true);
+
+			newPiece();
+			return;
+		}
+	}
+
+	// Update Y position
 	for (i = 0; i < 4; i++)
 	{
 		currentPiece[i].y++;
