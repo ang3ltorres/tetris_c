@@ -9,7 +9,7 @@
 
 #ifdef WINDOWS
 	#include <time.h>
-	#include <synchapi.h>
+	#include <windows.h>
 
 	#define sleep(ms) Sleep(ms)
 #else
@@ -27,6 +27,7 @@ typedef struct Piece Piece;
 uint8_t board[25];
 Piece currentPiece[4];
 uint16_t score;
+uint8_t key;
 /**********/
 
 /* FUNCTIONS */
@@ -35,11 +36,13 @@ bool getBit(uint8_t x, uint8_t y);
 void setBit(uint8_t x, uint8_t y, bool value);
 void newPiece();
 void updateCurrentPiece();
+void moveCurrentPiece(bool right);
 
 #ifdef WINDOWS
 
 void printBoard();
 void cleanScreen();
+uint8_t getKey();
 
 #endif
 /*************/
@@ -53,17 +56,18 @@ main()
 {
 	memset(board, 0x00, 25);
 	score = 0;
+	key = 0;
 
-	// Random
 	#ifdef WINDOWS
+		HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+		DWORD mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
+		SetConsoleMode(hInput, mode);
+
 		srand(time(NULL));
+		loop();
+		return 0;
 	#else
 		srand(12345);
-	#endif
-
-	#ifdef WINDOWS
-	loop();
-	return 0;
 	#endif
 }
 
@@ -78,7 +82,12 @@ void loop()
 		cleanScreen();
 		printBoard();
 
-		sleep(200);
+		sleep(400);
+
+		key = getKey();
+		if (key == 1) moveCurrentPiece(false);
+		else if (key == 2) moveCurrentPiece(true);
+
 		updateCurrentPiece();
 	}
 }
@@ -259,6 +268,35 @@ void updateCurrentPiece()
 	}
 }
 
+void moveCurrentPiece(bool right)
+{
+	uint8_t i;
+	int8_t dir = right ? 1 : -1;
+
+	// Prevent self collisions
+	for (i = 0; i < 4; i++)
+		setBit(currentPiece[i].x, currentPiece[i].y, false);
+
+	// Check collision
+	for (i = 0; i < 4; i++)
+	{
+		if ((!right && currentPiece[i].x == 0) || (currentPiece[i].x + dir >= 10) || (getBit(currentPiece[i].x + dir, currentPiece[i].y)))
+		{
+			for (i = 0; i < 4; i++)
+				setBit(currentPiece[i].x, currentPiece[i].y, true);
+
+			return;
+		}
+	}
+
+	// Update X position
+	for (i = 0; i < 4; i++)
+	{
+		currentPiece[i].x += dir;
+		setBit(currentPiece[i].x, currentPiece[i].y, true);
+	}
+}
+
 #ifdef WINDOWS
 
 void printBoard()
@@ -271,11 +309,20 @@ void printBoard()
 			printf("%c", (getBit(x, y) ? 219 : 32));
 		printf("\n");
 	}
+	printf("\n%u", getKey());
 }
 
 void cleanScreen()
 {
 	system("cls");
+}
+
+uint8_t getKey()
+{
+	if (GetAsyncKeyState('A') & 0x8000) return 1;
+	if (GetAsyncKeyState('D') & 0x8000) return 2;
+	
+	return 0;
 }
 
 #endif
