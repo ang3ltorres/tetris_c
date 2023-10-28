@@ -1,20 +1,41 @@
-#define DEBUG
-#define WINDOWS
+/*
+Seminario de embebidos D10
+Profesor Jesus Ramos
+Angel Emmanuel Suarez Torres
+217542842
+Proyecto final
+28 de octubre del 2023
+*/
 
-#include <stdlib.h>
-#include <stdio.h>
+#define LOADER_USED 1
+
+// LCD module connections
+sbit LCD_RS at RB4_bit;
+sbit LCD_EN at RB5_bit;
+sbit LCD_D4 at RB0_bit;
+sbit LCD_D5 at RB1_bit;
+sbit LCD_D6 at RB2_bit;
+sbit LCD_D7 at RB3_bit;
+
+sbit LCD_RS_Direction at TRISB4_bit;
+sbit LCD_EN_Direction at TRISB5_bit;
+sbit LCD_D4_Direction at TRISB0_bit;
+sbit LCD_D5_Direction at TRISB1_bit;
+sbit LCD_D6_Direction at TRISB2_bit;
+sbit LCD_D7_Direction at TRISB3_bit;
+// End LCD module connections
+
+// Keypad module connections
+char  keypadPort at PORTD;
+// End Keypad module connections
+
+// #include <stdlib.h>
+// #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
+// #include <string.h>
 #include <stdbool.h>
 
-#ifdef WINDOWS
-	#include <time.h>
-	#include <windows.h>
-
-	#define sleep(ms) Sleep(ms)
-#else
-	#define sleep(ms) delay_ms(ms)
-#endif
+#define sleep(ms) delay_ms(ms)
 
 struct Piece
 {
@@ -30,8 +51,11 @@ Piece oldPiece[4];
 uint8_t random;
 uint16_t score;
 uint8_t key;
-uint16_t speed;
 bool gameOver;
+
+uint8_t BYTE;
+uint8_t BIT;
+uint8_t MASK;
 /**********/
 
 /* FUNCTIONS */
@@ -39,45 +63,31 @@ void loop();
 bool getBit(uint8_t x, uint8_t y);
 void setBit(uint8_t x, uint8_t y, bool value);
 void newPiece();
-void updatePiece();
+bool updatePiece();
 void movePiece(bool right);
 void rotatePiece(bool right);
 
-#ifdef WINDOWS
-
 void printBoard();
-void cleanScreen();
 uint8_t getKey();
 
-#endif
+void config();
+void printLCD(char f, char c, const char txt[]);
+void printUART(const char txt[]);
+
 /*************/
 
-#ifdef WINDOWS
-	int
-#else
-	void
-#endif
-main()
+void main()
 {
-	memset(board, 0x00, 25);	
+	memset(board, 0x00, 25);
 	memset(oldPiece, 0x00, sizeof(Piece) * 4);
 	random = 0;
 	score = 0;
 	key = 0;
-	speed = 1;
 	gameOver = false;
 
-	#ifdef WINDOWS
-		HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-		DWORD mode = ENABLE_EXTENDED_FLAGS | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
-		SetConsoleMode(hInput, mode);
-
-		srand(time(NULL));
-		loop();
-		return 0;
-	#else
-		srand(12345);
-	#endif
+	config();
+	srand(12345);
+	loop();
 }
 
 void loop()
@@ -85,42 +95,37 @@ void loop()
 	// initial piece
 	random = rand() % 7;
 	newPiece();
+	printLCD(1, 1, "SCORE:");
 
 	while (!gameOver)
 	{
-		cleanScreen();
+		// cleanScreen();
 		printBoard();
 
-		sleep(30);
+		Lcd_Chr(1, 8, (score/100)+48);
+		Lcd_Chr(1, 9, ((score/10)%10)+48);
+		Lcd_Chr(1, 10, (score%10)+48);
 
-		key = getKey();
+		sleep(500);
+
+		getKey();
 		switch (key)
 		{
 			case 'L': movePiece(false); break;
 			case 'R': movePiece(true); break;
-			case 'D': speed = 1; break;
+			case 'D': {while (!updatePiece());} break;
 			case 'A': rotatePiece(false); break;
 			case 'B': rotatePiece(true); break;
 		}
 
-		speed--;
-		if (speed == 0)
-		{
-			updatePiece();
-			speed = 1;
-		}
+		updatePiece();
 	}
 
-	cleanScreen();
-	printf("--GAME OVER--");
+	printUART("--GAME OVER--");
 }
 
 bool getBit(uint8_t x, uint8_t y)
 {
-	uint8_t BYTE;
-	uint8_t BIT;
-	uint8_t MASK;
-
 	BYTE = ((y * 10) + x) / 8;
 	BIT = ((y * 10) + x) % 8;
 
@@ -130,10 +135,6 @@ bool getBit(uint8_t x, uint8_t y)
 
 void setBit(uint8_t x, uint8_t y, bool value)
 {
-	uint8_t BYTE;
-	uint8_t BIT;
-	uint8_t MASK;
-
 	BYTE = ((y * 10) + x) / 8;
 	BIT = ((y * 10) + x) % 8;
 
@@ -270,7 +271,7 @@ void newPiece()
 	}
 }
 
-void updatePiece()
+bool updatePiece()
 {
 	int8_t i;
 	int8_t x, y, y_aux;
@@ -307,7 +308,7 @@ void updatePiece()
 						for (x = 0; x < 10; x++)
 							setBit(x, y_aux, getBit(x, y_aux - 1));
 					}
-					
+
 					// Clean first row
 					for (x = 0; x < 10; x++)
 						setBit(x, 0, false);
@@ -315,7 +316,7 @@ void updatePiece()
 			}
 
 			newPiece();
-			return;
+			return true;
 		}
 	}
 
@@ -325,6 +326,8 @@ void updatePiece()
 		currentPiece[i].y++;
 		setBit(currentPiece[i].x, currentPiece[i].y, true);
 	}
+
+	return false;
 }
 
 void movePiece(bool right)
@@ -360,7 +363,7 @@ void rotatePiece(bool right)
 {
 	uint8_t i;
 	Piece temp;
-	
+
 	/* Subtract point of rotation for each point */
 	uint8_t rotationPointX = currentPiece[0].x;
 	uint8_t rotationPointY = currentPiece[0].y;
@@ -402,7 +405,7 @@ void rotatePiece(bool right)
 	}
 
 	/* Recover original position */
-	for (int i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++)
 	{
 		currentPiece[i].x += rotationPointX;
 		currentPiece[i].y += rotationPointY;
@@ -422,8 +425,6 @@ void rotatePiece(bool right)
 		setBit(currentPiece[i].x, currentPiece[i].y, true);
 }
 
-#ifdef WINDOWS
-
 void printBoard()
 {
 	uint8_t x, y;
@@ -431,25 +432,90 @@ void printBoard()
 	for (y = 0; y < 20; y++)
 	{
 		for (x = 0; x < 10; x++)
-			printf("%c", (getBit(x, y) ? 219 : 32));
-		printf("\n");
+			UART1_WRITE(getBit(x, y) ? 219 : 32);
+		printUART("\n\r");
 	}
-}
-
-void cleanScreen()
-{
-	system("cls");
 }
 
 uint8_t getKey()
 {
-	if (GetAsyncKeyState('A') & 0x8000) return 'L';
-	if (GetAsyncKeyState('D') & 0x8000) return 'R';
-	if (GetAsyncKeyState('S') & 0x8000) return 'D';
-	if (GetAsyncKeyState('Q') & 0x8000) return 'A';
-	if (GetAsyncKeyState('E') & 0x8000) return 'B';
-	
-	return 0;
+	key = Keypad_Key_Click();
+
+	switch (key)
+	{
+		case  1: key = 0; break;   // 1
+		case  2: key = 0; break;   // 2
+		case  3: key = 0; break;   // 3
+		case  4: key = 'B'; break; // A
+		case  5: key = 0; break;   // 4
+		case  6: key = 0; break;   // 5
+		case  7: key = 0; break;   // 6
+		case  8: key = 'A'; break; // B
+		case  9: key = 0; break;   // 7
+		case 10: key = 0; break;   // 8
+		case 11: key = 0; break;   // 9
+		case 12: key = 0; break; // C
+		case 13: key = 0; break;  // *
+		case 14: key = 'L'; break;   // 0
+		case 15: key = 'D'; break;  // #
+		case 16: key = 'R'; break;  // D
+	}
+
+	return key;
 }
 
-#endif
+void config()
+{
+	ANSEL = 0x00;
+	ANSELH = 0x00;
+	C1ON_bit = 0x00;
+	C2ON_bit = 0x00;
+
+	TRISA = 0x00;
+	TRISB = 0x00;
+	TRISC = 0x00;
+	TRISD = 0x00;
+	TRISE = 0x00;
+
+	PORTA = 0x00;
+	PORTB = 0x00;
+	PORTC = 0x00;
+	PORTD = 0x00;
+	PORTE = 0x00;
+
+	// TX
+	TRISC.F6 = 0;
+	PORTC.F6 = 0;
+
+	// RX
+	TRISC.F7 = 1; // C7 Entrada
+
+	UART1_Init(9600); // Iniciar UART1
+	delay_ms(200);
+
+	Lcd_Init();
+	Lcd_Cmd(_LCD_CLEAR);
+	Lcd_Cmd(_LCD_CURSOR_OFF);
+
+	Keypad_Init();
+}
+
+void printLCD(char f, char c, const char txt[])
+{
+	char i = 0;
+	while (txt[i] != '\0')
+	{
+		Lcd_Chr(f, c+i, txt[i]);
+		++i;
+	}
+}
+
+void printUART(const char txt[])
+{
+	unsigned int i = 0;
+	while (txt[i] != '\0')
+	{
+		UART1_WRITE(txt[i]);
+		i++;
+	}
+}
