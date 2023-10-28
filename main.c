@@ -26,6 +26,8 @@ typedef struct Piece Piece;
 /* GLOBAL */
 uint8_t board[25];
 Piece currentPiece[4];
+Piece oldPiece[4];
+uint8_t pieceType;
 uint16_t score;
 uint8_t key;
 /**********/
@@ -35,8 +37,9 @@ void loop();
 bool getBit(uint8_t x, uint8_t y);
 void setBit(uint8_t x, uint8_t y, bool value);
 void newPiece();
-void updateCurrentPiece();
-void moveCurrentPiece(bool right);
+void updatePiece();
+void movePiece(bool right);
+void rotatePiece(bool right);
 
 #ifdef WINDOWS
 
@@ -55,6 +58,8 @@ uint8_t getKey();
 main()
 {
 	memset(board, 0x00, 25);
+	memset(oldPiece, 0x00, sizeof(Piece) * 4);
+	pieceType = 0;
 	score = 0;
 	key = 0;
 
@@ -74,8 +79,14 @@ main()
 void loop()
 {
 	newPiece();
-	setBit(9, 19, true);
 	setBit(9, 0, true);
+	setBit(8, 0, true);
+	setBit(7, 0, true);
+
+	setBit(9, 19, true);
+	setBit(8, 19, true);
+	setBit(7, 19, true);
+	setBit(6, 19, true);
 
 	while (true)
 	{
@@ -85,10 +96,15 @@ void loop()
 		sleep(400);
 
 		key = getKey();
-		if (key == 1) moveCurrentPiece(false);
-		else if (key == 2) moveCurrentPiece(true);
+		switch (key)
+		{
+			case 'L': movePiece(false); break;
+			case 'R': movePiece(true); break;
+			case 'A': rotatePiece(false); break;
+			case 'B': rotatePiece(true); break;
+		}
 
-		updateCurrentPiece();
+		updatePiece();
 	}
 }
 
@@ -131,106 +147,120 @@ void newPiece()
 	{
 		// T
 		case 0:
-			currentPiece[0].x = 3;
+			pieceType = 'T';
+
+			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 4;
+			currentPiece[1].x = 1;
 			currentPiece[1].y = 0;
 
-			currentPiece[2].x = 5;
+			currentPiece[2].x = 2;
 			currentPiece[2].y = 0;
 
-			currentPiece[3].x = 4;
+			currentPiece[3].x = 1;
 			currentPiece[3].y = 1;
 			break;
 
 		// L
 		case 1:
-			currentPiece[0].x = 3;
+			pieceType = 'L';
+
+			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 3;
+			currentPiece[1].x = 0;
 			currentPiece[1].y = 1;
 
-			currentPiece[2].x = 3;
+			currentPiece[2].x = 0;
 			currentPiece[2].y = 2;
 
-			currentPiece[3].x = 4;
+			currentPiece[3].x = 1;
 			currentPiece[3].y = 2;
 			break;
 
 		// J
 		case 2:
-			currentPiece[0].x = 4;
+			pieceType = 'J';
+
+			currentPiece[0].x = 1;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 4;
+			currentPiece[1].x = 1;
 			currentPiece[1].y = 1;
 
-			currentPiece[2].x = 4;
+			currentPiece[2].x = 1;
 			currentPiece[2].y = 2;
 
-			currentPiece[3].x = 3;
+			currentPiece[3].x = 0;
 			currentPiece[3].y = 2;
 			break;
 
 		// I
 		case 3:
-			currentPiece[0].x = 4;
+			pieceType = 'I';
+
+			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 4;
+			currentPiece[1].x = 0;
 			currentPiece[1].y = 1;
 
-			currentPiece[2].x = 4;
+			currentPiece[2].x = 0;
 			currentPiece[2].y = 2;
 
-			currentPiece[3].x = 4;
+			currentPiece[3].x = 0;
 			currentPiece[3].y = 3;
 			break;
 
 		// S
 		case 4:
-			currentPiece[0].x = 4;
+			pieceType = 'S';
+
+			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 5;
+			currentPiece[1].x = 1;
 			currentPiece[1].y = 0;
 
-			currentPiece[2].x = 3;
+			currentPiece[2].x = 0;
 			currentPiece[2].y = 1;
 
-			currentPiece[3].x = 4;
+			currentPiece[3].x = 1;
 			currentPiece[3].y = 1;
 			break;
 
 		// Z
 		case 5:
-			currentPiece[0].x = 3;
+			pieceType = 'Z';
+
+			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 4;
+			currentPiece[1].x = 1;
 			currentPiece[1].y = 0;
 
-			currentPiece[2].x = 4;
+			currentPiece[2].x = 1;
 			currentPiece[2].y = 1;
 
-			currentPiece[3].x = 5;
+			currentPiece[3].x = 2;
 			currentPiece[3].y = 1;
 			break;
 
 		// O
 		case 6:
-			currentPiece[0].x = 4;
+			pieceType = 'O';
+
+			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
-			currentPiece[1].x = 5;
+			currentPiece[1].x = 1;
 			currentPiece[1].y = 0;
 
-			currentPiece[2].x = 4;
+			currentPiece[2].x = 0;
 			currentPiece[2].y = 1;
 
-			currentPiece[3].x = 5;
+			currentPiece[3].x = 1;
 			currentPiece[3].y = 1;
 			break;
 	}
@@ -239,9 +269,11 @@ void newPiece()
 		setBit(currentPiece[i].x, currentPiece[i].y, true);
 }
 
-void updateCurrentPiece()
+void updatePiece()
 {
-	uint8_t i;
+	int8_t i;
+	int8_t x, y, y_aux;
+	bool erase;
 
 	// Prevent self collisions
 	for (i = 0; i < 4; i++)
@@ -254,6 +286,29 @@ void updateCurrentPiece()
 		{
 			for (i = 0; i < 4; i++)
 				setBit(currentPiece[i].x, currentPiece[i].y, true);
+
+			// Check line
+			for (y = 19; y >= 0; y--)
+			{
+				erase = true;
+
+				for (x = 0; x < 10; x++)
+					if (!getBit(x, y)) {erase = false; break;}
+
+				if (erase)
+				{
+					// Copy each row
+					for (y_aux = y; y_aux > 0; y_aux--)
+					{
+						for (x = 0; x < 10; x++)
+							setBit(x, y_aux, getBit(x, y_aux - 1));
+					}
+					
+					// Clean first row
+					for (x = 0; x < 10; x++)
+						setBit(x, 0, false);
+				}
+			}
 
 			newPiece();
 			return;
@@ -268,7 +323,7 @@ void updateCurrentPiece()
 	}
 }
 
-void moveCurrentPiece(bool right)
+void movePiece(bool right)
 {
 	uint8_t i;
 	int8_t dir = right ? 1 : -1;
@@ -297,6 +352,75 @@ void moveCurrentPiece(bool right)
 	}
 }
 
+void rotatePiece(bool right)
+{
+	uint8_t i;
+	Piece temp;
+
+	/* Subtract point of rotation for each point */
+	uint8_t rotationPointX = currentPiece[0].x;
+	uint8_t rotationPointY = currentPiece[0].y;
+
+	// Prevent self collisions
+	for (i = 0; i < 4; i++)
+		setBit(currentPiece[i].x, currentPiece[i].y, false);
+
+	/* Save old pos */
+	memcpy(oldPiece, currentPiece, sizeof(Piece) * 4);
+
+	if (pieceType == 'O')
+		return;
+
+	/* Put on corner */
+	for (i = 0; i < 4; i++)
+	{
+		currentPiece[i].x -= rotationPointX;
+		currentPiece[i].y -= rotationPointY;
+	}
+
+	/* Do rotation */
+	if (right)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			temp = currentPiece[i];
+
+			currentPiece[i].x = temp.y * -1;
+			currentPiece[i].y = temp.x;
+		}
+	}
+	else
+	{
+		for (i = 0; i < 4; i++)
+		{
+			temp = currentPiece[i];
+
+			currentPiece[i].x = temp.y;
+			currentPiece[i].y = temp.x * -1;
+		}
+	}
+
+	/* Recover original position */
+	for (int i = 0; i < 4; i++)
+	{
+		currentPiece[i].x += rotationPointX;
+		currentPiece[i].y += rotationPointY;
+	}
+
+	// Check collision
+	for (i = 0; i < 4; i++)
+	{
+		if (currentPiece[i].x >= 10 || currentPiece[i].y >= 20 || getBit(currentPiece[i].x, currentPiece[i].y))
+		{
+			memcpy(currentPiece, oldPiece, sizeof(Piece) * 4);
+			break;
+		}
+	}
+
+	for (i = 0; i < 4; i++)
+		setBit(currentPiece[i].x, currentPiece[i].y, true);
+}
+
 #ifdef WINDOWS
 
 void printBoard()
@@ -319,8 +443,10 @@ void cleanScreen()
 
 uint8_t getKey()
 {
-	if (GetAsyncKeyState('A') & 0x8000) return 1;
-	if (GetAsyncKeyState('D') & 0x8000) return 2;
+	if (GetAsyncKeyState('A') & 0x8000) return 'L';
+	if (GetAsyncKeyState('D') & 0x8000) return 'R';
+	if (GetAsyncKeyState('Q') & 0x8000) return 'A';
+	if (GetAsyncKeyState('E') & 0x8000) return 'B';
 	
 	return 0;
 }
