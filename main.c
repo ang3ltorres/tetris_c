@@ -27,9 +27,11 @@ typedef struct Piece Piece;
 uint8_t board[25];
 Piece currentPiece[4];
 Piece oldPiece[4];
-uint8_t pieceType;
+uint8_t random;
 uint16_t score;
 uint8_t key;
+uint16_t speed;
+bool gameOver;
 /**********/
 
 /* FUNCTIONS */
@@ -57,11 +59,13 @@ uint8_t getKey();
 #endif
 main()
 {
-	memset(board, 0x00, 25);
+	memset(board, 0x00, 25);	
 	memset(oldPiece, 0x00, sizeof(Piece) * 4);
-	pieceType = 0;
+	random = 0;
 	score = 0;
 	key = 0;
+	speed = 1;
+	gameOver = false;
 
 	#ifdef WINDOWS
 		HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -78,34 +82,37 @@ main()
 
 void loop()
 {
+	// initial piece
+	random = rand() % 7;
 	newPiece();
-	setBit(9, 0, true);
-	setBit(8, 0, true);
-	setBit(7, 0, true);
 
-	setBit(9, 19, true);
-	setBit(8, 19, true);
-	setBit(7, 19, true);
-	setBit(6, 19, true);
-
-	while (true)
+	while (!gameOver)
 	{
 		cleanScreen();
 		printBoard();
 
-		sleep(400);
+		sleep(30);
 
 		key = getKey();
 		switch (key)
 		{
 			case 'L': movePiece(false); break;
 			case 'R': movePiece(true); break;
+			case 'D': speed = 1; break;
 			case 'A': rotatePiece(false); break;
 			case 'B': rotatePiece(true); break;
 		}
 
-		updatePiece();
+		speed--;
+		if (speed == 0)
+		{
+			updatePiece();
+			speed = 1;
+		}
 	}
+
+	cleanScreen();
+	printf("--GAME OVER--");
 }
 
 bool getBit(uint8_t x, uint8_t y)
@@ -141,14 +148,11 @@ void setBit(uint8_t x, uint8_t y, bool value)
 void newPiece()
 {
 	uint8_t i;
-	uint8_t random = rand() % 7;
 
 	switch (random)
 	{
 		// T
 		case 0:
-			pieceType = 'T';
-
 			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
@@ -164,8 +168,6 @@ void newPiece()
 
 		// L
 		case 1:
-			pieceType = 'L';
-
 			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
@@ -181,8 +183,6 @@ void newPiece()
 
 		// J
 		case 2:
-			pieceType = 'J';
-
 			currentPiece[0].x = 1;
 			currentPiece[0].y = 0;
 
@@ -198,8 +198,6 @@ void newPiece()
 
 		// I
 		case 3:
-			pieceType = 'I';
-
 			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
@@ -215,8 +213,6 @@ void newPiece()
 
 		// S
 		case 4:
-			pieceType = 'S';
-
 			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
@@ -232,8 +228,6 @@ void newPiece()
 
 		// Z
 		case 5:
-			pieceType = 'Z';
-
 			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
@@ -249,8 +243,6 @@ void newPiece()
 
 		// O
 		case 6:
-			pieceType = 'O';
-
 			currentPiece[0].x = 0;
 			currentPiece[0].y = 0;
 
@@ -265,8 +257,17 @@ void newPiece()
 			break;
 	}
 
+	random = rand() % 7;
+
 	for (i = 0; i < 4; i++)
+	{
+		currentPiece[i].x += 4;
+
+		if (getBit(currentPiece[i].x, currentPiece[i].y))
+			gameOver = true;
+
 		setBit(currentPiece[i].x, currentPiece[i].y, true);
+	}
 }
 
 void updatePiece()
@@ -297,6 +298,9 @@ void updatePiece()
 
 				if (erase)
 				{
+					score++;
+					y++;
+
 					// Copy each row
 					for (y_aux = y; y_aux > 0; y_aux--)
 					{
@@ -356,7 +360,7 @@ void rotatePiece(bool right)
 {
 	uint8_t i;
 	Piece temp;
-
+	
 	/* Subtract point of rotation for each point */
 	uint8_t rotationPointX = currentPiece[0].x;
 	uint8_t rotationPointY = currentPiece[0].y;
@@ -367,9 +371,6 @@ void rotatePiece(bool right)
 
 	/* Save old pos */
 	memcpy(oldPiece, currentPiece, sizeof(Piece) * 4);
-
-	if (pieceType == 'O')
-		return;
 
 	/* Put on corner */
 	for (i = 0; i < 4; i++)
@@ -433,7 +434,6 @@ void printBoard()
 			printf("%c", (getBit(x, y) ? 219 : 32));
 		printf("\n");
 	}
-	printf("\n%u", getKey());
 }
 
 void cleanScreen()
@@ -445,6 +445,7 @@ uint8_t getKey()
 {
 	if (GetAsyncKeyState('A') & 0x8000) return 'L';
 	if (GetAsyncKeyState('D') & 0x8000) return 'R';
+	if (GetAsyncKeyState('S') & 0x8000) return 'D';
 	if (GetAsyncKeyState('Q') & 0x8000) return 'A';
 	if (GetAsyncKeyState('E') & 0x8000) return 'B';
 	
