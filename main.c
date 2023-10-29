@@ -7,8 +7,6 @@ Proyecto final
 28 de octubre del 2023
 */
 
-#define LOADER_USED 1
-
 // LCD module connections
 sbit LCD_RS at RB4_bit;
 sbit LCD_EN at RB5_bit;
@@ -35,7 +33,7 @@ char  keypadPort at PORTD;
 // #include <string.h>
 #include <stdbool.h>
 
-#define sleep(ms) delay_ms(ms)
+#define BUZZER PORTC.F4
 
 struct Piece
 {
@@ -68,12 +66,11 @@ void movePiece(bool right);
 void rotatePiece(bool right);
 
 void printBoard();
-uint8_t getKey();
+void getKey();
 
 void config();
 void printLCD(char f, char c, const char txt[]);
 void printUART(const char txt[]);
-
 /*************/
 
 void main()
@@ -92,21 +89,37 @@ void main()
 
 void loop()
 {
-	// initial piece
+	// Initial piece
 	random = rand() % 7;
 	newPiece();
+
+	// LCD text
 	printLCD(1, 1, "SCORE:");
+	printLCD(2, 1, "NEXT:");
 
 	while (!gameOver)
 	{
-		// cleanScreen();
 		printBoard();
 
+		// Score
 		Lcd_Chr(1, 8, (score/100)+48);
 		Lcd_Chr(1, 9, ((score/10)%10)+48);
 		Lcd_Chr(1, 10, (score%10)+48);
 
-		sleep(500);
+		// Next piece
+		switch (random)
+		{
+			case 0: BYTE = 'T'; break;
+			case 1: BYTE = 'L'; break;
+			case 2: BYTE = 'J'; break;
+			case 3: BYTE = 'I'; break;
+			case 4: BYTE = 'S'; break;
+			case 5: BYTE = 'Z'; break;
+			case 6: BYTE = 'O'; break;
+		}
+		Lcd_Chr(2, 7, BYTE);
+
+		delay_ms(500);
 
 		getKey();
 		switch (key)
@@ -118,9 +131,11 @@ void loop()
 			case 'B': rotatePiece(true); break;
 		}
 
-		updatePiece();
+		if (key != 'D')
+			updatePiece();
 	}
 
+	printLCD(2, 1, "GAME OVER  ");
 	printUART("--GAME OVER--");
 }
 
@@ -299,6 +314,12 @@ bool updatePiece()
 
 				if (erase)
 				{
+					// Sound
+					BUZZER = 1;
+					delay_ms(50);
+					BUZZER = 0;
+					//
+
 					score++;
 					y++;
 
@@ -437,31 +458,29 @@ void printBoard()
 	}
 }
 
-uint8_t getKey()
+void getKey()
 {
 	key = Keypad_Key_Click();
 
 	switch (key)
 	{
-		case  1: key = 0; break;   // 1
-		case  2: key = 0; break;   // 2
-		case  3: key = 0; break;   // 3
+		case  1: key = 0;   break; // 1
+		case  2: key = 0;   break; // 2
+		case  3: key = 0;   break; // 3
 		case  4: key = 'B'; break; // A
-		case  5: key = 0; break;   // 4
-		case  6: key = 0; break;   // 5
-		case  7: key = 0; break;   // 6
+		case  5: key = 0;   break; // 4
+		case  6: key = 0;   break; // 5
+		case  7: key = 0;   break; // 6
 		case  8: key = 'A'; break; // B
-		case  9: key = 0; break;   // 7
-		case 10: key = 0; break;   // 8
-		case 11: key = 0; break;   // 9
-		case 12: key = 0; break; // C
-		case 13: key = 0; break;  // *
-		case 14: key = 'L'; break;   // 0
-		case 15: key = 'D'; break;  // #
-		case 16: key = 'R'; break;  // D
+		case  9: key = 0;   break; // 7
+		case 10: key = 0;   break; // 8
+		case 11: key = 0;   break; // 9
+		case 12: key = 0;   break; // C
+		case 13: key = 0;   break; // *
+		case 14: key = 'L'; break; // 0
+		case 15: key = 'D'; break; // #
+		case 16: key = 'R'; break; // D
 	}
-
-	return key;
 }
 
 void config()
@@ -490,6 +509,10 @@ void config()
 	// RX
 	TRISC.F7 = 1; // C7 Entrada
 
+	// BUZZER
+	TRISC.F4 = 0;
+	PORTC.F4 = 0;
+
 	UART1_Init(9600); // Iniciar UART1
 	delay_ms(200);
 
@@ -502,7 +525,7 @@ void config()
 
 void printLCD(char f, char c, const char txt[])
 {
-	char i = 0;
+	uint8_t i = 0;
 	while (txt[i] != '\0')
 	{
 		Lcd_Chr(f, c+i, txt[i]);
@@ -512,7 +535,7 @@ void printLCD(char f, char c, const char txt[])
 
 void printUART(const char txt[])
 {
-	unsigned int i = 0;
+	uint16_t i = 0;
 	while (txt[i] != '\0')
 	{
 		UART1_WRITE(txt[i]);
